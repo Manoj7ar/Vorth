@@ -7,8 +7,8 @@
   "types": "dist/agents/fix-writer/src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/index.ts",
-    "test": "vitest run --passWithNoTests",
+    "dev": "tsx watch src/index.ts dotenv_config_path=../../.env dotenv_config_example=../../.env.example",
+    "test": "vitest run --configLoader runner --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -17,6 +17,7 @@
     "@vorth/shared-types": "workspace:*",
     "dotenv-safe": "^9.1.0",
     "opossum": "^8.1.3",
+    "p-queue": "^8.0.1",
     "pino": "^9.7.0",
     "zod": "^3.24.3"
   }

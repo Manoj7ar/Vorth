@@ -6,6 +6,14 @@ import { hypothesisListSchema, type ChangeSurface, type Hypothesis } from "@vort
 
 import { geminiValidationSystemPrompt, renderValidateHypothesesPrompt } from "./prompts/validate-hypotheses.js";
 
+// If Google credentials are not configured, return empty hypotheses gracefully
+function isGoogleConfigured() {
+  return !!(
+    process.env.GOOGLE_CLOUD_PROJECT_ID &&
+    process.env.GOOGLE_CLOUD_PROJECT_ID !== "optional-fill-for-gke"
+  );
+}
+
 const vertexAi = new VertexAI({
   project: process.env.GOOGLE_CLOUD_PROJECT_ID ?? "",
   location: process.env.VERTEX_AI_LOCATION ?? "us-central1",
@@ -15,6 +23,10 @@ export async function generateGeminiHypotheses(changeSurface: ChangeSurface, res
   hypotheses: Hypothesis[];
   raw: string;
 }> {
+  if (!isGoogleConfigured()) {
+    return { hypotheses: [], raw: "[]" };
+  }
+
   const model = vertexAi.getGenerativeModel({
     model: "gemini-1.5-pro",
     generationConfig: {

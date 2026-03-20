@@ -1,78 +1,144 @@
 # Vorth
 
-Vorth is an intelligent chaos engineering agent for GitLab merge requests. It reads each MR diff, generates targeted chaos experiments with Claude and Gemini, executes them in staging, scores resilience, opens fix MRs for failures, and gates deployment with that score.
+**Intelligent chaos engineering for GitLab merge requests.** Vorth reads each MR diff, generates targeted chaos experiments using Claude and Gemini, runs them in an isolated GKE staging namespace, scores resilience 0-100, opens fix MRs for failures, and gates production deployment behind the score.
+
+> Built for the GitLab AI Hackathon 2026 - "You Orchestrate. AI Accelerates."
+
+## How It Works
+
+```text
+MR opened -> Diff Analyzer -> Hypothesis Engine (Claude + Gemini) -> Chaos Runner (GKE)
+                                                                             
+  Deploy Gate CLI <- Results Analyzer (Claude) <- Experiment Results + Metrics
+                                 
+   Block / Allow            Fix Writer (Claude) -> Draft Fix MR
+```
+
+1. GitLab sends an MR webhook to Vorth's webhook server.
+2. The **Diff Analyzer** reads the diff and extracts changed services and risk level.
+3. The **Hypothesis Engine** asks Claude (primary) and Gemini (validator) for targeted chaos experiments, builds consensus, and comments the plan on the MR.
+4. The developer replies `/vorth run`.
+5. The **Chaos Runner** provisions an ephemeral GKE namespace, deploys the changed services, runs experiments (`latency-injection`, `network-partition`, `cpu-stress`, `memory-stress`, `dependency-failure`), and tears everything down.
+6. The **Results Analyzer** computes the resilience score, asks Claude for a code-level narrative, and comments the report.
+7. If any experiment fails, the **Fix Writer** uses Claude to generate unified diff patches, commits them on a Vorth branch, and opens a draft fix MR.
+8. The **Deploy Gate** CLI reads the score from the database and exits 0 (allow) or 1 (block) inside GitLab CI.
+9. The **Next.js dashboard** shows project and MR-level resilience history, the green impact panel, and links to fix MRs.
+10. The **MCP server** at `/mcp` exposes Vorth's intelligence to Cursor and other MCP clients.
+
+## Quick Start (local, no GKE required)
+
+```bash
+# 1. Clone and install
+git clone https://gitlab.com/your-group/vorth && cd vorth
+pnpm install
+
+# 2. Configure environment
+cp .env.example .env
+# Fill in: GITLAB_TOKEN, GITLAB_WEBHOOK_SECRET, ANTHROPIC_API_KEY, DATABASE_URL, NEXTAUTH_SECRET
+# GKE/Vertex keys can remain as dummy strings for local testing
+
+# 3. Apply database schema
+psql $DATABASE_URL < packages/mcp-tools/src/schema.sql
+
+# 4. Seed demo data
+npx tsx scripts/seed-demo.ts
+
+# 5. Build and test
+pnpm build
+pnpm test   # scorer.test.ts and consensus.test.ts must pass
+
+# 6. Start servers (two terminals)
+pnpm --filter @vorth/webhook-server dev   # http://localhost:3001
+pnpm --filter @vorth/dashboard dev        # http://localhost:3000
+
+# 7. Verify
+curl http://localhost:3001/health         # {"ok":true}
+open http://localhost:3000/dashboard/1/mr/42  # demo MR
+```
+
+## Sending a Test Webhook
+
+```bash
+curl -X POST http://localhost:3001/webhook/gitlab \
+  -H "Content-Type: application/json" \
+  -H "X-Gitlab-Token: $GITLAB_WEBHOOK_SECRET" \
+  -d '{
+    "object_kind": "merge_request",
+    "project": { "id": 1, "name": "payment-service", "path_with_namespace": "mygroup/payment-service" },
+    "user": { "name": "Test User", "username": "testuser" },
+    "object_attributes": {
+      "iid": 1, "title": "Improve payment gateway timeout handling",
+      "source_branch": "feature/timeout-fix", "target_branch": "main", "action": "open"
+    }
+  }'
+```
+
+Trigger `/vorth run` by sending the same payload with `"object_kind": "note"` and `"object_attributes": { "note": "/vorth run" }`.
+
+## Deploy Gate in GitLab CI
+
+```yaml
+include:
+  - project: 'your-group/vorth'
+    file: '.gitlab-ci.yml'
+    ref: main
+
+vorth-resilience-gate:
+  stage: pre-deploy
+  script:
+    - npx vorth-gate check --mr-id $CI_MERGE_REQUEST_IID --project-id $CI_PROJECT_ID
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+```
+
+## MCP Integration (Cursor / Claude)
+
+Add to your MCP config or use the provided `vorth-mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "vorth": { "url": "http://localhost:3001/mcp", "transport": "http" }
+  }
+}
+```
+
+Available tools: `get_score_by_mr`, `get_project_overview`, `get_mr_experiments`, `check_deployment_safety`.
+
+## Resilience Score
+
+| Severity | Penalty |
+|----------|---------|
+| 5 (critical) | 25 |
+| 4 (high) | 15 |
+| 3 (medium) | 8 |
+| 1-2 (low) | 3 |
+| All failures recovered < 30s | +5 bonus |
+
+Score >= 70 means deployment allowed. Score < 70 with critical failures means `do-not-deploy`.
 
 ## Architecture
 
-Text diagram:
-
-1. GitLab sends MR and note webhooks to `apps/webhook-server`.
-2. The diff analyzer reads the MR diff, identifies changed services, and stores a `ChangeSurface`.
-3. The hypothesis engine queries resilience history, asks Claude and Gemini for experiments, builds consensus, stores raw outputs, and comments the plan back to the MR.
-4. The chaos runner provisions an ephemeral GKE namespace, deploys the changed services, runs chaos experiments, captures metrics/logs, and tears the namespace down.
-5. The results analyzer computes the resilience score, asks Claude for a narrative and code-level recommendations, stores the score, and comments the report.
-6. The fix writer turns failed experiments into targeted unified diff patches, commits them on a Vorth branch, and opens a draft fix MR.
-7. The deploy gate CLI reads the latest stored score and blocks or allows production deployment in GitLab CI.
-8. The Next.js dashboard shows project-level and MR-level resilience state from PostgreSQL.
-
-## Prerequisites
-
-- GitLab account with OAuth app credentials and API token
-- Google Cloud project with GKE and Cloud Monitoring access
-- Anthropic API key for Claude
-- Supabase or another PostgreSQL host for `DATABASE_URL`
-- `pnpm`, Node.js 20, and `kubectl`
-
-## Installation
-
-1. Copy `.env.example` to `.env` and fill in GitLab, Anthropic, Google Cloud, and PostgreSQL credentials.
-2. Install dependencies with `pnpm install`.
-3. Apply [`packages/mcp-tools/src/schema.sql`](/C:/Users/manoj/Vorth/packages/mcp-tools/src/schema.sql) to your PostgreSQL database.
-4. Start the webhook server and dashboard with `pnpm dev`, or run package-specific `pnpm --filter ... dev` commands.
-5. Configure GitLab project webhooks to point at `/webhook/gitlab` and GitLab OAuth to use `/auth/callback`.
-
-## Add Vorth To An Existing GitLab Project
-
-1. Deploy this repo or run it on reachable infrastructure.
-2. Add the GitLab webhook pointing to `POST /webhook/gitlab` with `X-Gitlab-Token` matching `GITLAB_WEBHOOK_SECRET`.
-3. Add the reusable deploy gate to the consumer repo’s `.gitlab-ci.yml` using the commented include block in this repo’s root `.gitlab-ci.yml`.
-4. Ensure the consumer project’s staging environment can be cloned into GKE and reached by the chaos runner.
-
-## Using `/vorth run`
-
-When Vorth comments a resilience plan on an MR, reply in the MR thread with `/vorth run`. The webhook server will regenerate the latest plan, provision an isolated namespace, execute the experiments, post the resilience report, and open a draft fix MR if any experiment fails.
-
-Use `/vorth skip` to bypass resilience testing for a merge request. Vorth records the skip in the MR thread, so teams should require a reason in the same discussion for auditability.
-
-## Understanding The Resilience Score
-
-- Start at `100`.
-- Deduct `25` for each failed severity-5 experiment.
-- Deduct `15` for each failed severity-4 experiment.
-- Deduct `8` for each failed severity-3 experiment.
-- Deduct `3` for each failed severity-1 or severity-2 experiment.
-- Add `5` if every failed experiment recovered in under `30` seconds.
-
-The score also carries a category breakdown for network resilience, dependency resilience, load resilience, and recovery speed. By default, deployment is allowed when the overall score is at least `70`.
-
-## Deploy Gate
-
-The deploy gate is exposed as a standalone CLI:
-
-```bash
-npx vorth-gate check --mr-id <iid> --project-id <id>
+```text
+apps/
+  dashboard/          Next.js 14 app router UI
+  webhook-server/     Express, receives GitLab webhooks, exposes MCP
+agents/
+  diff-analyzer/      Reads MR diffs, extracts change surface
+  hypothesis-engine/  Claude + Gemini consensus experiment planning
+  chaos-runner/       kubectl experiments in ephemeral GKE namespaces
+  results-analyzer/   Claude narrative + resilience scoring
+  fix-writer/         Claude unified diff patches + draft fix MR
+  deploy-gate/        CLI to block or allow production deployment
+packages/
+  shared-types/       Zod schemas shared across all agents
+  gitlab-client/      GitLab REST API client with retry
+  mcp-tools/          Database queries + MCP tool definitions
+infra/
+  terraform/          GKE cluster, Cloud Monitoring dashboard, GCS bucket
+  k8s/                Kubernetes namespace and chaos runner job manifests
 ```
-
-In CI, it fetches the latest stored score for the MR, posts a GitLab status, and exits `0` or `1`. If the score is below `MIN_RESILIENCE_SCORE` and the recommendation is `do-not-deploy`, the job fails and the production pipeline is blocked.
-
-## Contributing
-
-- Keep agent inputs and outputs validated with `zod`.
-- Use `pino` for structured logging and `p-retry` for GitLab or cloud API retries.
-- Add tests for deterministic logic before expanding orchestration.
-- Keep Claude and Gemini calls deterministic with `temperature: 0`.
-- Preserve the requested monorepo shape so external GitLab integration docs remain accurate.
 
 ## License
 
-MIT
+MIT - see [LICENSE](LICENSE).

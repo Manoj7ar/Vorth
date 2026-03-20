@@ -5,6 +5,10 @@ import { MetricServiceClient } from "@google-cloud/monitoring";
 const client = new MetricServiceClient();
 
 export async function readCloudMonitoringMetrics(projectId: string, service: string) {
+  if (!projectId || projectId === "optional-fill-for-gke") {
+    return [];
+  }
+
   const projectName = client.projectPath(projectId);
   const [timeSeries] = await client.listTimeSeries({
     name: projectName,

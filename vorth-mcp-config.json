@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "vorth": {
+      "url": "http://localhost:3001/mcp",
+      "transport": "http",
+      "description": "Vorth resilience intelligence  query scores, experiments, hypotheses, and trigger runs"
+    },
+    "gitlab": {
+      "url": "https://gitlab.com/-/mcp",
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer ${GITLAB_TOKEN}"
+      },
+      "description": "GitLab MCP server  read MRs, diffs, pipelines"
+    }
+  }
+}

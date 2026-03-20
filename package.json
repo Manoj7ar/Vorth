@@ -4,10 +4,10 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --cache=local:",
     "dev": "turbo run dev --parallel",
-    "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "test": "turbo run test --cache=local:",
+    "typecheck": "turbo run typecheck --cache=local:"
   },
   "dependencies": {
     "@vorth/deploy-gate": "workspace:*"

@@ -4,6 +4,7 @@ import { ChaosResultCard } from "@/components/ChaosResultCard";
 import { DeployGateStatus } from "@/components/DeployGateStatus";
 import { ExperimentTimeline } from "@/components/ExperimentTimeline";
 import { FixMRButton } from "@/components/FixMRButton";
+import { GreenScorePanel } from "@/components/GreenScorePanel";
 import { ResilienceScoreBadge } from "@/components/ResilienceScoreBadge";
 import { requireSession } from "@/lib/auth";
 import { getMergeRequestView } from "@/lib/db";
@@ -59,6 +60,11 @@ export default async function MergeRequestPage({
             recommendation={detail.recommendation}
           />
           <FixMRButton href={detail.fix_mr_url} />
+          <GreenScorePanel
+            experimentsRun={detail.experiments.length}
+            failuresCaught={failedExperiments.length}
+            deploymentBlocked={!(detail.deployment_allowed ?? true)}
+          />
         </div>
       </section>
 
