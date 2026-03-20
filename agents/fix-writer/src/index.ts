@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import pino from "pino";
 
-import { createGitLabClient } from "@vorth/gitlab-client";
+import { createGitLabClient, readRepositoryFile } from "@vorth/gitlab-client";
 import { postMrNote, updateFixMrUrl } from "@vorth/mcp-tools";
 import { changeSurfaceSchema, experimentResultListSchema, hypothesisListSchema, webhookPayloadSchema } from "@vorth/shared-types";
 
@@ -65,16 +65,12 @@ export async function runFixWriter(input: {
         continue;
       }
 
-      const source = await createGitLabClient()
-        .request(
-          `projects/${payload.project.id}/repository/files/${encodeURIComponent(targetFile)}?ref=${encodeURIComponent(mr.source_branch)}`,
-        )
-        .then((file) =>
-          Buffer.from(
-            typeof file === "object" && file && "content" in file ? String((file as { content?: string }).content ?? "") : "",
-            "base64",
-          ).toString("utf8"),
-        );
+      const { content: source } = await readRepositoryFile(
+        createGitLabClient(),
+        payload.project.id,
+        targetFile,
+        mr.source_branch,
+      );
 
       const patch = await generateFixPatch({
         filePath: targetFile,
