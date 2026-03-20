@@ -1,0 +1,14 @@
+name: vorth-deploy-gate
+description: Blocks or allows production deployment based on resilience score
+triggers:
+  - type: pipeline_stage
+    stage: pre-deploy
+    environment: production
+tools:
+  - name: fetch_latest_score
+  - name: block_deployment
+  - name: allow_deployment
+  - name: post_deployment_status
+context:
+  - resilience_scores
+  - deployment_environment

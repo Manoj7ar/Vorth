@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vorth-chaos-runner
+  namespace: vorth-system
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: default
+      containers:
+        - name: runner
+          image: node:20-alpine
+          command: ["sh", "-lc", "pnpm --filter @vorth/chaos-runner dev"]
+          envFrom:
+            - secretRef:
+                name: vorth-env

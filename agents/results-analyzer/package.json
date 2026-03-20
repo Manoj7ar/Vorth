@@ -1,0 +1,22 @@
+{
+  "name": "@vorth/results-analyzer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/agents/results-analyzer/src/index.js",
+  "types": "dist/agents/results-analyzer/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google-cloud/monitoring": "^5.3.1",
+    "@vorth/shared-types": "workspace:*",
+    "dotenv-safe": "^9.1.0",
+    "pino": "^9.7.0",
+    "zod": "^3.24.3"
+  }
+}

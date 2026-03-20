@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "paths": {
+      "@vorth/shared-types": [
+        "packages/shared-types/src/index.ts"
+      ],
+      "@vorth/gitlab-client": [
+        "packages/gitlab-client/src/index.ts"
+      ],
+      "@vorth/mcp-tools": [
+        "packages/mcp-tools/src/index.ts"
+      ],
+      "@vorth/diff-analyzer": [
+        "agents/diff-analyzer/src/index.ts"
+      ],
+      "@vorth/hypothesis-engine": [
+        "agents/hypothesis-engine/src/index.ts"
+      ],
+      "@vorth/chaos-runner": [
+        "agents/chaos-runner/src/index.ts"
+      ],
+      "@vorth/results-analyzer": [
+        "agents/results-analyzer/src/index.ts"
+      ],
+      "@vorth/fix-writer": [
+        "agents/fix-writer/src/index.ts"
+      ],
+      "@vorth/deploy-gate": [
+        "agents/deploy-gate/src/index.ts"
+      ]
+    },
+    "types": [
+      "node"
+    ]
+  }
+}

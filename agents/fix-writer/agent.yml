@@ -1,0 +1,15 @@
+name: vorth-fix-writer
+description: Uses Claude to write resilience fixes and opens a draft GitLab MR
+triggers:
+  - type: agent_output
+    agent: vorth-results-analyzer
+    condition: has_failures
+tools:
+  - name: read_source_file
+  - name: apply_code_patch
+  - name: create_branch
+  - name: open_draft_mr
+context:
+  - analysis_results
+  - source_files
+  - resilience_patterns

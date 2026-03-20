@@ -1,0 +1,19 @@
+{
+  "name": "@vorth/gitlab-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vorth/shared-types": "workspace:*",
+    "dotenv-safe": "^9.1.0",
+    "p-retry": "^6.2.0",
+    "zod": "^3.24.3"
+  }
+}

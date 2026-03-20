@@ -1,0 +1,12 @@
+name: vorth-hypothesis-engine
+description: Uses Claude + Gemini to generate targeted chaos experiment hypotheses
+triggers:
+  - type: agent_output
+    agent: vorth-diff-analyzer
+tools:
+  - name: query_resilience_history
+  - name: post_experiment_plan_comment
+  - name: store_hypotheses
+context:
+  - change_surface
+  - resilience_history

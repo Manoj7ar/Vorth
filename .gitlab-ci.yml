@@ -1,0 +1,48 @@
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+stages:
+  - build
+  - test
+  - deploy
+  - pre-deploy
+
+variables:
+  PNPM_VERSION: "8"
+
+.vorth-gate: &vorth-gate
+  stage: pre-deploy
+  image: node:20-alpine
+  script:
+    - corepack enable
+    - corepack prepare pnpm@$PNPM_VERSION --activate
+    - pnpm install --frozen-lockfile=false
+    - npx vorth-gate check --mr-id $CI_MERGE_REQUEST_IID --project-id $CI_PROJECT_ID
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+
+build:
+  stage: build
+  image: node:20-alpine
+  script:
+    - corepack enable
+    - corepack prepare pnpm@$PNPM_VERSION --activate
+    - pnpm install --frozen-lockfile=false
+    - pnpm build
+
+test:
+  stage: test
+  image: node:20-alpine
+  script:
+    - corepack enable
+    - corepack prepare pnpm@$PNPM_VERSION --activate
+    - pnpm install --frozen-lockfile=false
+    - pnpm test
+
+# Include this in consumer repos:
+# include:
+#   - project: 'your-group/vorth'
+#     file: '.gitlab-ci.yml'
+#     ref: main
+# vorth-resilience-gate:
+#   <<: *vorth-gate

@@ -1,0 +1,17 @@
+name: vorth-chaos-runner
+description: Executes chaos experiments in an isolated GKE namespace via GitLab CI
+triggers:
+  - type: mr_note
+    pattern: '/vorth run'
+  - type: agent_output
+    agent: vorth-hypothesis-engine
+    auto_run_if: severity_all_below_3
+tools:
+  - name: provision_gke_namespace
+  - name: deploy_staging_services
+  - name: run_chaos_experiment
+  - name: collect_metrics
+  - name: teardown_namespace
+context:
+  - hypotheses
+  - gke_credentials

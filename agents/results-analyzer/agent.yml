@@ -1,0 +1,14 @@
+name: vorth-results-analyzer
+description: Uses Claude to analyze chaos experiment results and compute a resilience score
+triggers:
+  - type: agent_output
+    agent: vorth-chaos-runner
+tools:
+  - name: read_gcloud_metrics
+  - name: compute_resilience_score
+  - name: store_results
+  - name: post_results_comment
+context:
+  - experiment_results
+  - hypotheses
+  - cloud_monitoring_data

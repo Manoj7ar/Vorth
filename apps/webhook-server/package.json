@@ -1,0 +1,33 @@
+{
+  "name": "@vorth/webhook-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/apps/webhook-server/src/index.js",
+  "types": "dist/apps/webhook-server/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vorth/chaos-runner": "workspace:*",
+    "@vorth/deploy-gate": "workspace:*",
+    "@vorth/diff-analyzer": "workspace:*",
+    "@vorth/fix-writer": "workspace:*",
+    "@vorth/gitlab-client": "workspace:*",
+    "@vorth/hypothesis-engine": "workspace:*",
+    "@vorth/mcp-tools": "workspace:*",
+    "@vorth/results-analyzer": "workspace:*",
+    "@vorth/shared-types": "workspace:*",
+    "dotenv-safe": "^9.1.0",
+    "express": "^4.21.2",
+    "pino": "^9.7.0",
+    "pino-http": "^10.4.0",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1"
+  }
+}

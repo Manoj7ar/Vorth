@@ -1,0 +1,47 @@
+name: Vorth Resilience Flow
+description: Orchestrates the full Vorth chaos engineering pipeline
+version: "1.0"
+
+triggers:
+  - merge_request.opened
+  - merge_request.updated
+  - merge_request.note_created
+
+steps:
+  - id: analyze_diff
+    agent: vorth-diff-analyzer
+    input:
+      mr_id: "{{ event.merge_request.iid }}"
+      project_id: "{{ event.project.id }}"
+
+  - id: generate_hypotheses
+    agent: vorth-hypothesis-engine
+    depends_on: analyze_diff
+    input:
+      change_surface: "{{ steps.analyze_diff.output }}"
+
+  - id: run_experiments
+    agent: vorth-chaos-runner
+    depends_on: generate_hypotheses
+    condition: "{{ event.type == 'note' && event.note.body contains '/vorth run' || steps.generate_hypotheses.output.auto_run == true }}"
+    input:
+      hypotheses: "{{ steps.generate_hypotheses.output.hypotheses }}"
+
+  - id: analyze_results
+    agent: vorth-results-analyzer
+    depends_on: run_experiments
+    input:
+      results: "{{ steps.run_experiments.output }}"
+
+  - id: write_fixes
+    agent: vorth-fix-writer
+    depends_on: analyze_results
+    condition: "{{ steps.analyze_results.output.score.failed > 0 }}"
+    input:
+      analysis: "{{ steps.analyze_results.output }}"
+
+  - id: gate_deployment
+    agent: vorth-deploy-gate
+    depends_on: analyze_results
+    input:
+      score: "{{ steps.analyze_results.output.score }}"

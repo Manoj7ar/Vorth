@@ -1,0 +1,16 @@
+name: vorth-diff-analyzer
+description: Reads an MR diff and extracts the change surface for chaos targeting
+triggers:
+  - type: merge_request
+    events: [opened, updated]
+tools:
+  - name: read_mr_diff
+  - name: identify_changed_services
+  - name: extract_change_surface
+  - name: post_mr_comment
+context:
+  - repository_tree
+  - merge_request_diff
+output:
+  type: change_surface
+  schema: ChangeSurface
