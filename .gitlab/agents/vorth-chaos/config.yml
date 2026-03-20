@@ -1,0 +1,43 @@
+image: node:20-slim
+
+injectGatewayToken: true
+
+commands:
+  - apt-get update -q && apt-get install -y git curl && rm -rf /var/lib/apt/lists/*
+  - npm install -g pnpm tsx
+  - pnpm install --frozen-lockfile=false
+  - pnpm build
+  - |
+    PAYLOAD=$(cat <<JSONEOF
+    {
+      "object_kind": "note",
+      "project": {
+        "id": $AI_FLOW_PROJECT_ID,
+        "name": "$AI_FLOW_PROJECT_NAME",
+        "path_with_namespace": "$AI_FLOW_PROJECT_PATH"
+      },
+      "user": {
+        "name": "$AI_FLOW_USER_LOGIN",
+        "username": "$AI_FLOW_USER_LOGIN"
+      },
+      "merge_request": {
+        "iid": $AI_FLOW_MR_IID,
+        "title": "$AI_FLOW_MR_TITLE",
+        "source_branch": "$AI_FLOW_SOURCE_BRANCH",
+        "target_branch": "$AI_FLOW_TARGET_BRANCH",
+        "action": "open"
+      },
+      "object_attributes": {
+        "note": "$AI_FLOW_INPUT",
+        "action": "create"
+      }
+    }
+    JSONEOF
+    )
+    echo "$PAYLOAD" | node dist/apps/webhook-server/src/entry.js
+
+variables:
+  - ANTHROPIC_API_KEY
+  - DATABASE_URL
+  - GITLAB_TOKEN
+  - MIN_RESILIENCE_SCORE
